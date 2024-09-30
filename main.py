@@ -1,7 +1,7 @@
 import os
 from langchain_core.tools import tool
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.messages import HumanMessage
 from langchain.schema.messages import SystemMessage
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.output_parsers import StrOutputParser
@@ -9,11 +9,17 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import AgentExecutor
 from langchain.agents import create_tool_calling_agent
-from langchain.agents.format_scratchpad.tools import format_to_tool_messages
 from mem0 import Memory
+import pyautogui
+import base64
+from io import BytesIO
+from PIL import Image
 from dotenv import load_dotenv
 import requests
 import json
+import warnings
+
+warnings.filterwarnings("ignore")
 
 
 load_dotenv()
@@ -97,6 +103,47 @@ def create_github_repo(repo_name: str, visibility: str):
     return response.json()
 
 
+@tool
+def take_screenshot_and_query_ai(query: str) -> str:
+    """
+    Take a screenshot, encode it as base64, and query the AI with the screenshot and a prompt.
+
+    :param query: The text query to send to the AI.
+    :return: The response from the AI.
+    """
+    screenshot = pyautogui.screenshot()
+
+    if screenshot.mode == "RGBA":
+        screenshot = screenshot.convert("RGB")
+
+    buffered = BytesIO()
+    screenshot.save(buffered, format="JPEG")
+
+    image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+    SYSTEM_PROMPT = """
+    You are an AI assistant capable of taking screenshot and handling user queries regaring the screenshot. Your task is to provide a helpful, short and concise response about user's screen queries.
+    """
+
+    prompt_template = ChatPromptTemplate.from_messages(
+        [
+            SystemMessage(content=SYSTEM_PROMPT),
+            HumanMessage(
+                content=[
+                    {"type": "text", "text": query},
+                    {
+                        "type": "image_url",
+                        "image_url": f"data:image/jpeg;base64,{image_base64}",
+                    },
+                ],
+            ),
+        ]
+    )
+    chain = prompt_template | llm | StrOutputParser()
+    response = chain.invoke({"query": query})
+    return response
+
+
 class Assistant:
     def __init__(self, llm, tools):
         self.agent = self._create_inference_chain(llm, tools)
@@ -163,7 +210,7 @@ llm = ChatGoogleGenerativeAI(
     max_tokens=1024,
 )
 
-tools = [exponentiate, add, subtract, create_github_repo]
+tools = [exponentiate, add, subtract, create_github_repo, take_screenshot_and_query_ai]
 
 
 def main():

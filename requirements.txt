@@ -8,3 +8,5 @@ langchain_google_genai
 langchain-community
 langchain_core
 requests
+Pillow
+pyautogui
