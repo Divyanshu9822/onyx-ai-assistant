@@ -1,0 +1,5 @@
+# mem0ai
+git+https://github.com/Divyanshu9822/mem0.git@main
+litellm
+google-generativeai
+python-dotenv
