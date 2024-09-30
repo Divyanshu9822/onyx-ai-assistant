@@ -1,17 +1,26 @@
 import os
+from langchain_core.tools import tool
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import HumanMessage, ToolMessage
 from langchain.schema.messages import SystemMessage
 from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.agents import AgentExecutor
+from langchain.agents import create_tool_calling_agent
+from langchain.agents.format_scratchpad.tools import format_to_tool_messages
 from mem0 import Memory
 from dotenv import load_dotenv
+import requests
+import json
+
 
 load_dotenv()
 
 user_id = "divyanshu"
 os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
+github_personal_token = os.getenv("GITHUB_PERSONAL_TOKEN")
 
 qdrant_collection_name = os.getenv("QDRANT_COLLECTION_NAME")
 qdrant_url = os.getenv("QDRANT_URL")
@@ -47,23 +56,50 @@ config = {
 
 memory = Memory.from_config(config_dict=config)
 
-# # Add 5 distinct memories with metadata
-# memories_to_add = [
-#     ("I recently started a new job as a software engineer", {"category": "career"}),
-#     ("I traveled to Japan last year for vacation", {"category": "travel"}),
-#     ("I bought a new bicycle to stay active", {"category": "fitness"}),
-#     ("My favorite dish is lasagna", {"category": "food"}),
-#     ("I have a pet dog named Bruno", {"category": "personal"}),
-# ]
 
-# # Add each memory to the memory store with metadata and user_id
-# for mem, meta in memories_to_add:
-#     memory.add(mem, user_id=user_id, metadata=meta)
+@tool
+def exponentiate(x: float, y: float) -> float:
+    """Raise 'x' to the 'y'."""
+    return x**y
+
+
+@tool
+def add(x: float, y: float) -> float:
+    """Add 'x' and 'y'."""
+    return x + y
+
+
+@tool
+def subtract(x: float, y: float) -> float:
+    """Subtract 'x' from 'y'."""
+    return y - x
+
+
+@tool
+def create_github_repo(repo_name: str, visibility: str):
+    """
+    Create a GitHub repository with specified visibility.
+
+    Args:
+        repo_name (str): The name of the repository to create.
+        visibility (str): Visibility of the repository, either 'public' or 'private'.
+
+    Returns:
+        dict: Response from the GitHub API.
+    """
+    url = "https://api.github.com/user/repos"
+    headers = {
+        "Authorization": f"token {github_personal_token}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+    data = {"name": repo_name, "private": visibility == "private"}
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    return response.json()
 
 
 class Assistant:
-    def __init__(self, llm):
-        self.chain = self._create_inference_chain(llm)
+    def __init__(self, llm, tools):
+        self.agent = self._create_inference_chain(llm, tools)
 
     def answer(self, question: str, user_id: str) -> str:
         """
@@ -83,14 +119,14 @@ class Assistant:
         )
 
         prompt = f"User input: {question}\nPrevious memories: {relevant_memories_text}"
-        response = self.chain.invoke(
+        response = self.agent.invoke(
             {"prompt": prompt},
             config={"configurable": {"session_id": "unused"}},
         )
 
-        return response
+        return response["output"]
 
-    def _create_inference_chain(self, llm):
+    def _create_inference_chain(self, llm, tools):
         SYSTEM_PROMPT = """
         You are an AI personal assistant with context awareness and long-term memory. Your job is to assist the user, remember key details from conversations, and provide personalized support. Use past interactions to adapt responses and make future conversations more efficient. Respond naturally like a human, without explaining the reasoning behind your responses or why you chose them.
         """
@@ -105,14 +141,16 @@ class Assistant:
                         {"type": "text", "text": "{prompt}"},
                     ],
                 ),
+                MessagesPlaceholder(variable_name="agent_scratchpad"),
             ]
         )
 
-        chain = prompt_template | llm | StrOutputParser()
+        agent = create_tool_calling_agent(llm, tools, prompt=prompt_template)
+        agent_executor = AgentExecutor(agent=agent, tools=tools)
 
         chat_message_history = ChatMessageHistory()
         return RunnableWithMessageHistory(
-            chain,
+            agent_executor,
             lambda _: chat_message_history,
             input_messages_key="prompt",
             history_messages_key="chat_history",
@@ -125,9 +163,11 @@ llm = ChatGoogleGenerativeAI(
     max_tokens=1024,
 )
 
+tools = [exponentiate, add, subtract, create_github_repo]
+
 
 def main():
-    assistant = Assistant(llm)
+    assistant = Assistant(llm, tools)
 
     while True:
         user_input = input("\nAsk me something: (or 'quit' to exit):\t")

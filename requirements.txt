@@ -3,7 +3,8 @@ git+https://github.com/Divyanshu9822/mem0.git@main
 litellm
 google-generativeai
 python-dotenv
-opencv-python
 langchain
 langchain_google_genai
 langchain-community
+langchain_core
+requests
