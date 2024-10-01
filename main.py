@@ -122,7 +122,9 @@ def take_screenshot_and_query_ai(query: str) -> str:
     image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
     SYSTEM_PROMPT = """
-    You are an AI assistant capable of taking screenshot and handling user queries regaring the screenshot. Your task is to provide a helpful, short and concise response about user's screen queries.
+    You are an AI assistant capable of taking screenshots and responding to user queries based on it. Your task is to provide helpful, concise, and natural responses to their questions about the screen.
+
+    Respond as a human would, without explaining your reasoning or explicitly mentioning the word "screenshot." Simply refer to it as "the screen."
     """
 
     prompt_template = ChatPromptTemplate.from_messages(
@@ -140,7 +142,7 @@ def take_screenshot_and_query_ai(query: str) -> str:
         ]
     )
     chain = prompt_template | llm | StrOutputParser()
-    response = chain.invoke({"query": query})
+    response = chain.invoke({"query": query, "image_base64": image_base64})
     return response
 
 
@@ -175,7 +177,7 @@ class Assistant:
 
     def _create_inference_chain(self, llm, tools):
         SYSTEM_PROMPT = """
-        You are an AI personal assistant with context awareness and long-term memory. Your job is to assist the user, remember key details from conversations, and provide personalized support. Use past interactions to adapt responses and make future conversations more efficient. Respond naturally like a human, without explaining the reasoning behind your responses or why you chose them.
+        You are an AI personal assistant with context awareness, long-term memory, and the ability to take and interpret screenshots. Your job is to assist the user, handle queries regarding the screen, remember key details from conversations, and provide personalized support. Use past interactions to adapt responses and make future conversations more efficient. Respond naturally like a human, without explaining the reasoning behind your responses or why you chose them.
         """
 
         prompt_template = ChatPromptTemplate.from_messages(
