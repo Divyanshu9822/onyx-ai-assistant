@@ -130,8 +130,9 @@ def take_screenshot_and_query_ai(query: str) -> str:
     prompt_template = ChatPromptTemplate.from_messages(
         [
             SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(
-                content=[
+            (
+                "human",
+                [
                     {"type": "text", "text": query},
                     {
                         "type": "image_url",
@@ -167,7 +168,13 @@ class Assistant:
             mem["memory"] for mem in previous_memories["results"]
         )
 
-        prompt = f"User input: {question}\nPrevious memories: {relevant_memories_text}"
+        prompt = f"""
+        User input: {question}
+
+        Relevant memories: 
+        
+        {relevant_memories_text}
+        """
         response = self.agent.invoke(
             {"prompt": prompt},
             config={"configurable": {"session_id": "unused"}},
@@ -183,7 +190,7 @@ class Assistant:
         prompt_template = ChatPromptTemplate.from_messages(
             [
                 SystemMessage(content=SYSTEM_PROMPT),
-                MessagesPlaceholder(variable_name="chat_history"),
+                MessagesPlaceholder(variable_name="chat_history", n_messages=3),
                 (
                     "human",
                     [
@@ -209,7 +216,6 @@ class Assistant:
 llm = ChatGoogleGenerativeAI(
     model="gemini-1.5-flash-002",
     temperature=0.2,
-    max_tokens=1024,
 )
 
 tools = [exponentiate, add, subtract, create_github_repo, take_screenshot_and_query_ai]
