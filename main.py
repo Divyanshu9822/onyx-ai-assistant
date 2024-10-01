@@ -14,6 +14,7 @@ import pyautogui
 import base64
 from io import BytesIO
 from PIL import Image
+import cv2
 from dotenv import load_dotenv
 import requests
 import json
@@ -147,6 +148,57 @@ def take_screenshot_and_query_ai(query: str) -> str:
     return response
 
 
+@tool
+def capture_photo_and_query_ai(prompt: str) -> str:
+    """
+    Capture a photo using the device's camera, encode it as base64, and query the AI with the photo and a prompt.
+
+    :param prompt: The text prompt to send to the AI.
+    :return: The response from the AI.
+    """
+    camera = cv2.VideoCapture(0)
+
+    if not camera.isOpened():
+        return "Error: Unable to access the camera."
+
+    ret, frame = camera.read()
+
+    camera.release()
+
+    if not ret:
+        return "Error: Unable to capture photo."
+
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    buffered = BytesIO()
+    image = Image.fromarray(rgb_frame)
+    image.save(buffered, format="JPEG")
+
+    image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+    SYSTEM_PROMPT = "You are an AI assistant capable of clicking images using the camera and handling user queries. Use both the text prompt and the image to provide a helpful and detailed response."
+
+    prompt_template = ChatPromptTemplate.from_messages(
+        [
+            SystemMessage(content=SYSTEM_PROMPT),
+            (
+                "human",
+                [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": f"data:image/jpeg;base64,{image_base64}",
+                    },
+                ],
+            ),
+        ]
+    )
+
+    chain = prompt_template | llm | StrOutputParser()
+    response = chain.invoke({"prompt": prompt, "image_base64": image_base64})
+    return response
+
+
 class Assistant:
     def __init__(self, llm, tools):
         self.agent = self._create_inference_chain(llm, tools)
@@ -184,7 +236,7 @@ class Assistant:
 
     def _create_inference_chain(self, llm, tools):
         SYSTEM_PROMPT = """
-        You are an AI personal assistant with context awareness, long-term memory, and the ability to take and interpret screenshots. Your job is to assist the user, handle queries regarding the screen, remember key details from conversations, and provide personalized support. Use past interactions to adapt responses and make future conversations more efficient. Respond naturally like a human, without explaining the reasoning behind your responses or why you chose them.
+        You are an AI personal assistant with context awareness, long-term memory, ability to take and interpret screenshots using along with capturing images using device camera. Your job is to assist the user, handle queries regarding the screen and the image clicked using camera, remember key details from conversations, and provide personalized support. Use past interactions to adapt responses and make future conversations more efficient. Respond naturally like a human, without explaining the reasoning behind your responses or why you chose them.
         """
 
         prompt_template = ChatPromptTemplate.from_messages(
@@ -218,7 +270,14 @@ llm = ChatGoogleGenerativeAI(
     temperature=0.2,
 )
 
-tools = [exponentiate, add, subtract, create_github_repo, take_screenshot_and_query_ai]
+tools = [
+    exponentiate,
+    add,
+    subtract,
+    create_github_repo,
+    take_screenshot_and_query_ai,
+    capture_photo_and_query_ai,
+]
 
 
 def main():
