@@ -11,3 +11,5 @@ requests
 opencv-python 
 Pillow
 pyautogui
+deepface
+tf-keras
