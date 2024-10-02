@@ -8,6 +8,7 @@ GITHUB_PERSONAL_TOKEN = os.getenv("GITHUB_PERSONAL_TOKEN")
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FACES_DB_PATH = os.path.join(BASE_DIR, "data", "faces-db")
+CLONE_BASE_DIR = os.getenv("CLONE_BASE_DIR")
 
 QDRANT_COLLECTION_NAME = os.getenv("QDRANT_COLLECTION_NAME")
 QDRANT_URL = os.getenv("QDRANT_URL")

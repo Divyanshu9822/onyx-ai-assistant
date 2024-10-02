@@ -1,6 +1,6 @@
 from assistant.tools.math import exponentiate, add, subtract
 from assistant.tools.face import recognize_face, remember_person
-from assistant.tools.github import create_github_repo
+from assistant.tools.github import create_github_repo, clone_github_repo
 from assistant.tools.media import (
     take_screenshot_and_query_ai,
     capture_photo_and_query_ai,
@@ -20,6 +20,7 @@ tools = [
     add,
     subtract,
     create_github_repo,
+    clone_github_repo,
     take_screenshot_and_query_ai,
     capture_photo_and_query_ai,
     recognize_face,
@@ -39,10 +40,11 @@ def main():
         if user_input.lower() == "quit":
             print("\nAssistant: Goodbye! Feel free to come back anytime. :)")
             break
-        
+
         answer = assistant.answer(user_input, user_id=USER_ID)
 
         print(f"Assistant: {answer}\n")
+
 
 if __name__ == "__main__":
     main()
