@@ -10,6 +10,7 @@ from assistant.memory import memory
 class Assistant:
     def __init__(self, llm, tools):
         self.agent = self._create_inference_chain(llm, tools)
+        self.llm = llm
 
     def answer(self, question: str, user_id: str) -> str:
         """
@@ -39,6 +40,40 @@ class Assistant:
             {"prompt": prompt},
             config={"configurable": {"session_id": "unused"}},
         )
+
+        triage_prompt = f"""
+        The user asked: {question}
+        The assistant responded: {response['output']}
+
+        Should this conversation be stored in long-term memory? 
+        """
+
+        triage_messages = [
+            {
+                "role": "system",
+                "content": """
+                You are an AI assistant with access to long-term memory, which allows you to recall and remember key information from previous conversations. 
+                Your task is to evaluate whether the current conversation contains important details that should be stored for future reference. 
+                Prioritize storing information that includes:
+                - Personal user details (preferences, goals, life events, or specific requests)
+                - Ideas, suggestions, or new insights
+                - Any conversation that may be referenced later for context
+                - Plans, strategies, or key decisions
+
+                If the conversation contains general inquiries, routine questions, or temporary matters that are unlikely to be relevant in the future, it should not be stored.
+
+                Answer with one of the following options: NEEDS_TO_BE_STORED or NOT_NEEDS_TO_BE_STORED.
+                """,
+            },
+            {"role": "human", "content": triage_prompt},
+        ]
+
+        triage_response = self.llm.invoke(triage_messages)
+
+        if "NEEDS_TO_BE_STORED" in triage_response.content:
+            memory.add(
+                f"User: {question}\nAssistant: {response['output']}", user_id=user_id
+            )
 
         return response["output"]
 
