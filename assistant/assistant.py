@@ -114,7 +114,7 @@ class Assistant:
         prompt_template = ChatPromptTemplate.from_messages(
             [
                 SystemMessage(content=SYSTEM_PROMPT),
-                MessagesPlaceholder(variable_name="messages", n_messages=5),
+                MessagesPlaceholder(variable_name="messages"),
             ]
         )
 
