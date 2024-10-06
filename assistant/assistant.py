@@ -1,13 +1,11 @@
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.schema.messages import SystemMessage
-from langchain_community.chat_message_histories import ChatMessageHistory
-from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain.agents import AgentExecutor
-from langchain.agents import create_tool_calling_agent
 from pyaudio import PyAudio, paInt16
 import openai
-from assistant.memory import memory
-
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.prebuilt.chat_agent_executor import AgentState
+from langgraph.prebuilt import create_react_agent
+from assistant.memory import mem0
 
 class Assistant:
     def __init__(self, llm, tools):
@@ -25,7 +23,7 @@ class Assistant:
         if not question:
             return
 
-        previous_memories = memory.search(question, user_id=user_id, limit=3)
+        previous_memories = mem0.search(question, user_id=user_id, limit=3)
 
         relevant_memories_text = "\n".join(
             mem["memory"] for mem in previous_memories["results"]
@@ -39,13 +37,13 @@ class Assistant:
         {relevant_memories_text}
         """
         response = self.agent.invoke(
-            {"prompt": prompt},
-            config={"configurable": {"session_id": "unused"}},
+            {"messages": [("human", prompt)]},
+            config={"configurable": {"thread_id": "test-thread"}},
         )
 
         triage_prompt = f"""
         The user asked: {question}
-        The assistant responded: {response['output']}
+        The assistant responded: {response["messages"][-1].content}
 
         Should this conversation be stored in long-term memory? 
         """
@@ -73,14 +71,14 @@ class Assistant:
         triage_response = self.llm.invoke(triage_messages)
 
         if "NEEDS_TO_BE_STORED" in triage_response.content:
-            memory.add(
-                f"User: {question}\nAssistant: {response['output']}", user_id=user_id
+            mem0.add(
+                f"User: {question}\nAssistant: {response["messages"][-1].content}", user_id=user_id
             )
 
-        print(f"Assistant: {response["output"]}\n")
+        print(f"Assistant: {response["messages"][-1].content}\n")
 
         if response:
-            self._tts(response["output"])
+            self._tts(response["messages"][-1].content)
 
     def _tts(self, response):
         player = PyAudio().open(format=paInt16, channels=1, rate=24000, output=True)
@@ -93,6 +91,7 @@ class Assistant:
         ) as stream:
             for chunk in stream.iter_bytes(chunk_size=1024):
                 player.write(chunk)
+        return response["messages"][-1].content
 
     def _create_inference_chain(self, llm, tools):
         SYSTEM_PROMPT = """
@@ -133,24 +132,19 @@ class Assistant:
         prompt_template = ChatPromptTemplate.from_messages(
             [
                 SystemMessage(content=SYSTEM_PROMPT),
-                MessagesPlaceholder(variable_name="chat_history", n_messages=3),
-                (
-                    "human",
-                    [
-                        {"type": "text", "text": "{prompt}"},
-                    ],
-                ),
-                MessagesPlaceholder(variable_name="agent_scratchpad"),
+                MessagesPlaceholder(variable_name="messages"),
             ]
         )
 
-        agent = create_tool_calling_agent(llm, tools, prompt=prompt_template)
-        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+        def _modify_state_messages(state: AgentState):
+            return prompt_template.invoke({"messages": state["messages"]}).to_messages()
 
-        chat_message_history = ChatMessageHistory()
-        return RunnableWithMessageHistory(
-            agent_executor,
-            lambda _: chat_message_history,
-            input_messages_key="prompt",
-            history_messages_key="chat_history",
+        memory = MemorySaver()
+        langgraph_agent_executor = create_react_agent(
+            llm,
+            tools,
+            state_modifier=_modify_state_messages,
+            checkpointer=memory,
         )
+
+        return langgraph_agent_executor
