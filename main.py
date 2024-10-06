@@ -8,6 +8,7 @@ from assistant.tools.media import (
 from assistant.llm import llm
 from assistant.assistant import Assistant
 from assistant.config.settings import USER_ID
+from speech_recognition import Microphone, Recognizer, UnknownValueError, RequestError
 from dotenv import load_dotenv
 import warnings
 
@@ -27,24 +28,27 @@ tools = [
     remember_person,
 ]
 
-
-def main():
-    assistant = Assistant(llm, tools)
-
-    print("\nHello! I am your AI assistant. How can I assist you today?")
-    print("Type 'quit' anytime to exit the conversation.\n")
-
-    while True:
-        user_input = input("You: ")
-
-        if user_input.lower() == "quit":
-            print("\nAssistant: Goodbye! Feel free to come back anytime. :)")
-            break
-
-        answer = assistant.answer(user_input, user_id=USER_ID)
-
-        print(f"Assistant: {answer}\n")
+recognizer = Recognizer()
+microphone = Microphone()
+assistant = Assistant(llm, tools)
 
 
-if __name__ == "__main__":
-    main()
+def audio_callback(recognizer, audio):
+    try:
+        prompt = recognizer.recognize_google(audio, language="en-US")
+        print(f"\nYou: {prompt}")
+        assistant.answer(prompt, USER_ID)
+
+    except UnknownValueError:
+        print("There was an error processing the audio.")
+    except RequestError as e:
+        print(f"Could not request results from Google Speech Recognition service; {e}")
+
+with microphone as source:
+    recognizer.adjust_for_ambient_noise(source)
+
+stop_listening = recognizer.listen_in_background(microphone, audio_callback)
+while True:
+    if input("Type and Enter 'q' to quit: ") == "q": 
+        break
+stop_listening(wait_for_stop=False)

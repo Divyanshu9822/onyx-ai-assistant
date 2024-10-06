@@ -6,6 +6,8 @@ load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GITHUB_PERSONAL_TOKEN = os.getenv("GITHUB_PERSONAL_TOKEN")
 
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FACES_DB_PATH = os.path.join(BASE_DIR, "data", "faces-db")
 CLONE_BASE_DIR = os.getenv("CLONE_BASE_DIR")

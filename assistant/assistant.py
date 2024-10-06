@@ -4,6 +4,8 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain.agents import AgentExecutor
 from langchain.agents import create_tool_calling_agent
+from pyaudio import PyAudio, paInt16
+import openai
 from assistant.memory import memory
 
 
@@ -75,7 +77,22 @@ class Assistant:
                 f"User: {question}\nAssistant: {response['output']}", user_id=user_id
             )
 
-        return response["output"]
+        print(f"Assistant: {response["output"]}\n")
+
+        if response:
+            self._tts(response["output"])
+
+    def _tts(self, response):
+        player = PyAudio().open(format=paInt16, channels=1, rate=24000, output=True)
+
+        with openai.audio.speech.with_streaming_response.create(
+            model="tts-1",
+            voice="alloy",
+            response_format="pcm",
+            input=response,
+        ) as stream:
+            for chunk in stream.iter_bytes(chunk_size=1024):
+                player.write(chunk)
 
     def _create_inference_chain(self, llm, tools):
         SYSTEM_PROMPT = """
@@ -128,7 +145,7 @@ class Assistant:
         )
 
         agent = create_tool_calling_agent(llm, tools, prompt=prompt_template)
-        agent_executor = AgentExecutor(agent=agent, tools=tools)
+        agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
         chat_message_history = ChatMessageHistory()
         return RunnableWithMessageHistory(
