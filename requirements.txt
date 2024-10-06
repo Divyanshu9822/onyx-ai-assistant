@@ -13,3 +13,4 @@ Pillow
 pyautogui
 deepface
 tf-keras
+langgraph
