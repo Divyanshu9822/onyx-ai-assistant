@@ -3,7 +3,7 @@ from langchain.schema.messages import SystemMessage
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt.chat_agent_executor import AgentState
 from langgraph.prebuilt import create_react_agent
-from assistant.memory import memory as mem0
+from assistant.memory import mem0
 
 class Assistant:
     def __init__(self, llm, tools):
