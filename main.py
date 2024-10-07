@@ -37,8 +37,10 @@ assistant = Assistant(llm, tools)
 
 def audio_callback(recognizer, audio):
     try:
+        print("You can start speaking now...") 
         prompt = recognizer.recognize_google(audio, language="en-US")
         print(f"\nYou: {prompt}")
+        print("Processing your request...")  
         assistant.answer(prompt, USER_ID)
 
     except UnknownValueError:
