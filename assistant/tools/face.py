@@ -1,10 +1,9 @@
 import os
 from langchain_core.tools import tool
-import cv2
 from datetime import datetime
 from deepface import DeepFace
-import time
 from assistant.config.settings import FACES_DB_PATH
+from assistant.utils.helper import capture_image, save_image
 
 
 @tool
@@ -14,34 +13,26 @@ def recognize_face() -> str:
 
     :return: The name of the recognized person, or a message if no match is found.
     """
-    camera = cv2.VideoCapture(0)
-    if not camera.isOpened():
-        return "Error: Unable to access the camera."
+    try:
+        frame = capture_image()
 
-    time.sleep(2)
+        temp_image_path = "temp_current_user.jpg"
+        save_image(frame, temp_image_path)
 
-    ret, frame = camera.read()
-    camera.release()
+        result = DeepFace.find(img_path=temp_image_path, db_path=FACES_DB_PATH)
 
-    if not ret:
-        return "Error: Unable to capture the photo."
+        os.remove(temp_image_path)
 
-    temp_image_path = "temp_current_user.jpg"
-    cv2.imwrite(temp_image_path, frame)
+        if len(result) > 0:
+            best_match = result[0]["identity"]
+            person_dir = best_match.values[0]
+            person_name = person_dir.split("/")[-2]
+            return f"The person is {person_name}"
+        else:
+            return "No match found in the database."
 
-    result = DeepFace.find(img_path=temp_image_path, db_path=FACES_DB_PATH)
-
-    os.remove(temp_image_path)
-
-    if len(result) > 0:
-        best_match = result[0]["identity"]
-        person_dir = best_match.values[0]
-
-        person_name = person_dir.split("/")[-2]
-
-        return f"The person is {person_name}"
-    else:
-        return "No match found in the database."
+    except Exception as e:
+        return str(e)
 
 
 @tool
@@ -52,25 +43,19 @@ def remember_person(person_name: str) -> str:
     :param person_name: The name of the person to remember.
     :return: A confirmation message.
     """
-    person_folder = os.path.join(FACES_DB_PATH, person_name)
-    if not os.path.exists(person_folder):
-        os.makedirs(person_folder)
+    try:
+        person_folder = os.path.join(FACES_DB_PATH, person_name.lower())
+        if not os.path.exists(person_folder):
+            os.makedirs(person_folder)
 
-    camera = cv2.VideoCapture(0)
-    if not camera.isOpened():
-        return "Error: Unable to access the camera."
+        frame = capture_image()
 
-    time.sleep(2)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        photo_path = os.path.join(person_folder, f"{timestamp}.jpg")
 
-    ret, frame = camera.read()
-    camera.release()
+        save_image(frame, photo_path)
 
-    if not ret:
-        return "Error: Unable to capture the photo."
+        return f"Memory updated. I'll remember you now, {person_name}!"
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    photo_path = os.path.join(person_folder, f"{timestamp}.jpg")
-
-    cv2.imwrite(photo_path, frame)
-
-    return f"Memory updated. I'll remember you now, {person_name}!"
+    except Exception as e:
+        return str(e)

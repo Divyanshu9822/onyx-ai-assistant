@@ -4,7 +4,7 @@ from assistant.tools.github import create_github_repo, clone_github_repo
 from assistant.tools.media import (
     take_screenshot_and_query_ai,
     capture_photo_and_query_ai,
-    capture_photo_and_google_lens_image_query,
+    google_lens_search,
 )
 from assistant.llm import llm
 from assistant.assistant import Assistant
@@ -24,7 +24,7 @@ tools = [
     clone_github_repo,
     take_screenshot_and_query_ai,
     capture_photo_and_query_ai,
-    capture_photo_and_google_lens_image_query,
+    google_lens_search,
     recognize_face,
     remember_person,
 ]
