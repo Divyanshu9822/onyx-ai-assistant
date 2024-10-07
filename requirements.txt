@@ -16,3 +16,4 @@ pyaudio
 soundfile
 SpeechRecognition
 langgraph
+cloudinary
