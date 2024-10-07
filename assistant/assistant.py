@@ -5,6 +5,7 @@ from langgraph.prebuilt.chat_agent_executor import AgentState
 from langgraph.prebuilt import create_react_agent
 from assistant.memory import mem0
 
+
 class Assistant:
     def __init__(self, llm, tools):
         self.agent = self._create_inference_chain(llm, tools)
@@ -39,9 +40,11 @@ class Assistant:
             config={"configurable": {"thread_id": "test-thread"}},
         )
 
+        agent_response_content = response["messages"][-1].content
+
         triage_prompt = f"""
         The user asked: {question}
-        The assistant responded: {response["messages"][-1].content}
+        The assistant responded: {agent_response_content}
 
         Should this conversation be stored in long-term memory? 
         """
@@ -70,10 +73,11 @@ class Assistant:
 
         if "NEEDS_TO_BE_STORED" in triage_response.content:
             mem0.add(
-                f"User: {question}\nAssistant: {response["messages"][-1].content}", user_id=user_id
+                f"User: {question}\nAssistant: {agent_response_content}",
+                user_id=user_id,
             )
 
-        return response["messages"][-1].content
+        return agent_response_content
 
     def _create_inference_chain(self, llm, tools):
         SYSTEM_PROMPT = """
