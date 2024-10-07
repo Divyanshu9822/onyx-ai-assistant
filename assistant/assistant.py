@@ -81,17 +81,32 @@ class Assistant:
             self._tts(response["messages"][-1].content)
 
     def _tts(self, response):
-        player = PyAudio().open(format=paInt16, channels=1, rate=24000, output=True)
+        player = PyAudio()
+        
+        stream = player.open(format=paInt16, channels=1, rate=24000, output=True)
 
-        with openai.audio.speech.with_streaming_response.create(
-            model="tts-1",
-            voice="alloy",
-            response_format="pcm",
-            input=response,
-        ) as stream:
-            for chunk in stream.iter_bytes(chunk_size=1024):
-                player.write(chunk)
-        return response["messages"][-1].content
+        try:
+            with openai.audio.speech.with_streaming_response.create(
+                model="tts-1",
+                voice="alloy",
+                response_format="pcm",
+                input=response,
+            ) as audio_stream:
+                for chunk in audio_stream.iter_bytes(chunk_size=1024):
+                    if chunk:  
+                        stream.write(chunk)
+                    else:
+                        print("Received an empty chunk. Ending playback.")
+                        break  
+            
+        except Exception as e:
+            print(f"An error occurred during TTS: {e}")
+        
+        finally:
+            stream.stop_stream()
+            stream.close()
+            player.terminate()
+
 
     def _create_inference_chain(self, llm, tools):
         SYSTEM_PROMPT = """
