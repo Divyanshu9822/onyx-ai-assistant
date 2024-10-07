@@ -95,6 +95,8 @@ class Assistant:
         - If the user asks for actions involving repositories (e.g., cloning, creating repos), make sure to handle Git operations appropriately.
         - If a question involves the current screen or screen-related queries, take a screenshot and interpret it to respond.
         - If user recognition or camera input is needed, capture the image, analyze it, and respond accordingly.
+        - If the user specifically requests a Google Lens search, perform the search and provide the results.
+        - If the user has not mentioned Google Lens and only requires an image capture, proceed with the capture_photo_and_query_ai tool to analyze the image and respond based on that analysis.
         - When using tools, ensure that the result aligns with the user's request. If unsure, ask the user for clarification instead of making assumptions.
 
         **Memory and context handling**:
