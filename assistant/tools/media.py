@@ -2,6 +2,8 @@ from langchain_core.tools import tool
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema.messages import SystemMessage
 from langchain_core.output_parsers import StrOutputParser
+from langchain_community.tools.google_lens import GoogleLensQueryRun
+from langchain_community.utilities.google_lens import GoogleLensAPIWrapper
 import pyautogui
 import base64
 from io import BytesIO
@@ -9,6 +11,8 @@ from PIL import Image
 import cv2
 import time
 from assistant.llm import llm
+from assistant.utils.cloudinary_utils import upload_image
+
 
 @tool
 def take_screenshot_and_query_ai(query: str) -> str:
@@ -104,4 +108,38 @@ def capture_photo_and_query_ai(prompt: str) -> str:
 
     chain = prompt_template | llm | StrOutputParser()
     response = chain.invoke({"prompt": prompt, "image_base64": image_base64})
+    return response
+
+
+@tool
+def capture_photo_and_google_lens_image_query():
+    """
+    Capture a photo using the device's camera and Query Google Lens with an image .
+
+    :return: The response from Google Lens.
+    """
+    camera = cv2.VideoCapture(0)
+
+    if not camera.isOpened():
+        return "Error: Unable to access the camera."
+
+    time.sleep(2)
+
+    ret, frame = camera.read()
+
+    camera.release()
+
+    if not ret:
+        return "Error: Unable to capture photo."
+
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    buffered = BytesIO()
+    image = Image.fromarray(rgb_frame)
+    image.save(buffered, format="JPEG")
+
+    base64_image = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    image_src = upload_image(base64_image)
+    search = GoogleLensQueryRun(api_wrapper=GoogleLensAPIWrapper())
+    response = search.run(image_src)
     return response
