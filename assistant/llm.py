@@ -1,6 +1,6 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-1.5-flash-002",
+llm = ChatOpenAI(
+    model="gpt-4o-mini",
     temperature=0.2,
 )

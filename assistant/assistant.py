@@ -37,7 +37,7 @@ class Assistant:
         """
         response = self.agent.invoke(
             {"messages": [("human", prompt)]},
-            config={"configurable": {"thread_id": "test-thread"}},
+            config={"configurable": {"thread_id": "testing"}},
         )
 
         agent_response_content = response["messages"][-1].content

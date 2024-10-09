@@ -1,10 +1,7 @@
-# mem0ai
-git+https://github.com/Divyanshu9822/mem0.git@main
-litellm
-google-generativeai
+mem0ai
 python-dotenv
 langchain
-langchain_google_genai
+langchain_openai
 langchain-community
 langchain_core
 requests
