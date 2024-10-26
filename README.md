@@ -9,7 +9,7 @@ Onyx AI Assistant is an advanced AI-powered virtual assistant capable of long-te
 
 ## Demo
 
-<div style="position: relative; padding-bottom: 62.5%; height: 0;"><iframe src="https://www.loom.com/embed/1264867b9c0042f3b5294d2f784d722e?sid=7311906e-763d-423f-8f6f-feeb1752467a" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe></div>
+[Loom Video](https://www.loom.com/share/1264867b9c0042f3b5294d2f784d722e?sid=0e645ffb-c3c7-4eec-90ed-a20058b313fc)
 
 ## Table of Contents
 - [Project Description](#project-description)
