@@ -1,5 +1,4 @@
-# mem0ai
-git+https://github.com/Divyanshu9822/mem0.git@main
+mem0ai
 litellm
 google-generativeai
 python-dotenv
